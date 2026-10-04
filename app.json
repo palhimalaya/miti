@@ -106,7 +106,8 @@
       "router": {},
       "eas": {
         "projectId": "miti-local"
-      }
+      },
+      "githubRepo": "palhimalaya/miti"
     }
   }
 }

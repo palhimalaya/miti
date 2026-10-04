@@ -10,6 +10,7 @@ import { ThemeProvider, useTheme } from '@/src/theme/ThemeProvider'
 import { bootstrapApp } from '@/src/services/bootstrap'
 import { useCalendarStore } from '@/src/stores/calendarStore'
 import { getDay } from '@/src/domain/calendar'
+import { UpdatePrompt } from '@/src/features/update/UpdatePrompt'
 
 export { ErrorBoundary } from 'expo-router'
 
@@ -75,6 +76,7 @@ function RootNavigator() {
           options={{ presentation: 'modal', title: 'Add event' }}
         />
       </Stack>
+      <UpdatePrompt />
       <StatusBar style={theme.mode === 'dark' ? 'light' : 'dark'} />
     </NavThemeProvider>
   )

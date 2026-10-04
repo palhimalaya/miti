@@ -20,6 +20,27 @@ Phases 1–6 implemented in-repo:
 
 Not in this build (future): cloud sync, accounts, friend sharing, iOS widgets, search-first UX.
 
+## Release (GitHub Actions)
+
+Push a version tag (or run the workflow manually) to build a release APK and attach it to a GitHub Release:
+
+```bash
+git tag v1.0.1
+git push origin v1.0.1
+```
+
+Workflow: `.github/workflows/android-release.yml`
+
+Optional repo secrets for a real upload keystore (otherwise CI signs with the debug keystore):
+
+- `ANDROID_KEYSTORE_BASE64`
+- `ANDROID_KEYSTORE_PASSWORD`
+- `ANDROID_KEY_ALIAS`
+- `ANDROID_KEY_PASSWORD`
+
+`expo.extra.githubRepo` is set to `palhimalaya/miti` so the app can check
+GitHub `/releases/latest` and open the release / APK download link.
+
 ## Commands
 
 ```bash

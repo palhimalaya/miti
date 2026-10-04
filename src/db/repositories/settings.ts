@@ -60,10 +60,19 @@ export async function saveSetting<K extends keyof AppSettings>(
     widgetShowPersonal: 'widget_show_personal',
     timezonePolicy: 'timezone_policy',
   }
+  await saveJsonSetting(map[key], value)
+}
+
+/** Generic JSON settings helper (update dismissals, etc.). */
+export async function getJsonSetting<T>(key: string, fallback: T): Promise<T> {
+  return getJson(key, fallback)
+}
+
+export async function saveJsonSetting(key: string, value: unknown): Promise<void> {
   await db
     .insert(settings)
     .values({
-      key: map[key],
+      key,
       valueJson: JSON.stringify(value),
       updatedAt: nowIso(),
     })

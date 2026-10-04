@@ -1,9 +1,16 @@
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { useState } from 'react'
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useSettingsStore } from '@/src/stores/settingsStore'
 import { useTheme } from '@/src/theme/ThemeProvider'
 import { scheduleLocalReminders } from '@/src/services/notifications'
 import { refreshWidgets } from '@/src/features/widget/refreshWidgets'
+import {
+  checkForAppUpdate,
+  getInstalledVersion,
+  type AppUpdateInfo,
+} from '@/src/services/appUpdate'
+import { UpdateAvailableCard } from '@/src/features/update/UpdateAvailableCard'
 
 function OptionRow({
   label,
@@ -44,6 +51,9 @@ export default function SettingsScreen() {
     setUiLanguage,
     setWidgetShowPersonal,
   } = useSettingsStore()
+  const [checkingUpdate, setCheckingUpdate] = useState(false)
+  const [updateInfo, setUpdateInfo] = useState<AppUpdateInfo | null>(null)
+  const [updateMessage, setUpdateMessage] = useState<string | null>(null)
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: theme.colors.bgCanvas }]} edges={['bottom']}>
@@ -133,6 +143,41 @@ export default function SettingsScreen() {
             Refresh local notifications
           </Text>
         </Pressable>
+
+        <Text style={[styles.section, { color: theme.colors.textSecondary }]}>App updates</Text>
+        <Text style={{ color: theme.colors.textSecondary }}>
+          Installed {getInstalledVersion()}
+        </Text>
+        <Pressable
+          disabled={checkingUpdate}
+          onPress={() => {
+            setCheckingUpdate(true)
+            setUpdateMessage(null)
+            void checkForAppUpdate()
+              .then((info) => {
+                setUpdateInfo(info.available ? info : null)
+                setUpdateMessage(
+                  info.available
+                    ? null
+                    : `You are on the latest release (${info.currentVersion}).`,
+                )
+              })
+              .finally(() => setCheckingUpdate(false))
+          }}
+          style={[styles.action, { backgroundColor: theme.colors.bgMuted, marginTop: 8 }]}
+        >
+          {checkingUpdate ? (
+            <ActivityIndicator color={theme.colors.primary} />
+          ) : (
+            <Text style={{ color: theme.colors.textPrimary, fontWeight: '600' }}>
+              Check for updates
+            </Text>
+          )}
+        </Pressable>
+        {updateMessage ? (
+          <Text style={{ color: theme.colors.textSecondary }}>{updateMessage}</Text>
+        ) : null}
+        {updateInfo ? <UpdateAvailableCard update={updateInfo} /> : null}
 
         <Text style={[theme.typography.caption, { color: theme.colors.textAdSecondary, marginTop: 20 }]}>
           Package com.uplixor.miti · Offline-first · Festival dates from verified seed data
