@@ -22,7 +22,9 @@ Not in this build (future): cloud sync, accounts, friend sharing, iOS widgets, s
 
 ## Release (GitHub Actions)
 
-Push a version tag (or run the workflow manually) to build a release APK and attach it to a GitHub Release:
+Push a version tag (or run the workflow manually) to build a release APK and attach it to a GitHub Release.
+
+`android/` is gitignored (Expo prebuild output), so CI runs `expo prebuild` before Gradle.
 
 ```bash
 git tag v1.0.1
