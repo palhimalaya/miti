@@ -63,6 +63,23 @@ npx expo prebuild --platform android
 npx expo run:android
 ```
 
+### Local release APK (test before CI)
+
+Same path CI uses — build on your machine first:
+
+```bash
+export JAVA_HOME=/home/cosine/.jdks/temurin-17
+export PATH="$JAVA_HOME/bin:$PATH"
+
+npm run android:release
+# APK: android/app/build/outputs/apk/release/app-release.apk
+
+adb install -r android/app/build/outputs/apk/release/app-release.apk
+# or: npm run android:release:install
+```
+
+Without upload-keystore secrets this signs with the debug keystore (fine for sideload testing). First run is slow; later local Gradle runs are usually faster.
+
 `react-native-android-widget` must be **≥ 0.22** for React Native 0.86
 (`CSSBackgroundDrawable` was removed from RN core).
 
