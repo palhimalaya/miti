@@ -5,6 +5,7 @@ import {
   MitiMediumWidget,
   MitiSmallWidget,
   buildWidgetSnapshot,
+  clampSelectedToVisibleMonth,
   shiftMonth,
 } from './widgetTasks'
 import { getFestivalsForBsDay, getFestivalsForBsMonth } from '@/src/db/repositories/festivals'
@@ -16,34 +17,26 @@ async function loadSnapshot() {
   migrateDatabase()
   await seedDatabase()
   const state = await getWidgetState()
-  const visibleYear = state?.visibleBsYear
-  const visibleMonth = state?.visibleBsMonth
-  const selected =
+  const fallback = buildWidgetSnapshot()
+  const visibleYear = state?.visibleBsYear ?? fallback.visibleYear
+  const visibleMonth = state?.visibleBsMonth ?? fallback.visibleMonth
+  const selectedRaw =
     state?.selectedBsYear && state.selectedBsMonth && state.selectedBsDay
       ? {
           year: state.selectedBsYear,
           month: state.selectedBsMonth,
           day: state.selectedBsDay,
         }
-      : undefined
+      : fallback.selected
 
-  const year = visibleYear ?? buildWidgetSnapshot().visibleYear
-  const month = visibleMonth ?? buildWidgetSnapshot().visibleMonth
-  const festivals = await getFestivalsForBsMonth(year, month)
-  const selectedBs = selected ?? {
-    year,
-    month,
-    day: festivals[0]?.bsDay ?? 1,
-  }
-  const dayFestivals = await getFestivalsForBsDay(
-    selectedBs.year,
-    selectedBs.month,
-    selectedBs.day,
-  )
+  const selected = clampSelectedToVisibleMonth(selectedRaw, visibleYear, visibleMonth)
+  const festivals = await getFestivalsForBsMonth(visibleYear, visibleMonth)
+  const dayFestivals = await getFestivalsForBsDay(selected.year, selected.month, selected.day)
+
   return buildWidgetSnapshot({
-    visibleYear: year,
-    visibleMonth: month,
-    selected: selectedBs,
+    visibleYear,
+    visibleMonth,
+    selected,
     festivalTitle: dayFestivals[0]?.titleNp ?? dayFestivals[0]?.titleEn ?? undefined,
     festivalDays: festivals.map(
       (f) =>
@@ -71,19 +64,14 @@ export async function widgetTaskHandler(props: WidgetTaskHandlerProps) {
     case 'WIDGET_DELETED':
       break
     case 'WIDGET_CLICK': {
-      if (props.clickAction === 'PREV_MONTH') {
-        const next = shiftMonth(snapshot.visibleYear, snapshot.visibleMonth, -1)
+      if (props.clickAction === 'PREV_MONTH' || props.clickAction === 'NEXT_MONTH') {
+        const delta = props.clickAction === 'PREV_MONTH' ? -1 : 1
+        const next = shiftMonth(snapshot.visibleYear, snapshot.visibleMonth, delta)
+        const selected = clampSelectedToVisibleMonth(snapshot.selected, next.year, next.month)
         await saveWidgetState({
           visibleBsYear: next.year,
           visibleBsMonth: next.month,
-          selected: snapshot.selected,
-        })
-      } else if (props.clickAction === 'NEXT_MONTH') {
-        const next = shiftMonth(snapshot.visibleYear, snapshot.visibleMonth, 1)
-        await saveWidgetState({
-          visibleBsYear: next.year,
-          visibleBsMonth: next.month,
-          selected: snapshot.selected,
+          selected,
         })
       } else if (props.clickAction === 'SELECT_DATE') {
         const data = props.clickActionData as {
@@ -93,8 +81,8 @@ export async function widgetTaskHandler(props: WidgetTaskHandlerProps) {
         }
         if (data.year && data.month && data.day) {
           await saveWidgetState({
-            visibleBsYear: snapshot.visibleYear,
-            visibleBsMonth: snapshot.visibleMonth,
+            visibleBsYear: data.month === snapshot.visibleMonth ? snapshot.visibleYear : data.year,
+            visibleBsMonth: data.month,
             selected: { year: data.year, month: data.month, day: data.day },
           })
         }

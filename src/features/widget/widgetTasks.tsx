@@ -1,9 +1,8 @@
 import React from 'react'
 import { FlexWidget, TextWidget } from 'react-native-android-widget'
 import {
-  MAX_BS_YEAR,
-  MIN_BS_YEAR,
-  getDay,
+  BS_MONTH_NAMES_NP,
+  WEEKDAYS,
   getMonth,
   getToday,
   type BsDate,
@@ -11,6 +10,9 @@ import {
 } from '@/src/domain/calendar'
 import { getKathmanduAdToday } from '@/src/services/kathmanduToday'
 import { formatNumber } from '@/src/utils/numerals'
+import { clampSelectedToVisibleMonth } from './widgetNav'
+
+export { clampSelectedToVisibleMonth, shiftMonth } from './widgetNav'
 
 export type WidgetSnapshot = {
   visibleYear: number
@@ -22,21 +24,18 @@ export type WidgetSnapshot = {
   festivalDays: Set<string>
 }
 
-function clamp(year: number, month: number) {
-  let y = year
-  let m = month
-  if (m > 12) {
-    y += 1
-    m = 1
-  }
-  if (m < 1) {
-    y -= 1
-    m = 12
-  }
-  if (y < MIN_BS_YEAR) return { year: MIN_BS_YEAR, month: 1 }
-  if (y > MAX_BS_YEAR) return { year: MAX_BS_YEAR, month: 12 }
-  return { year: y, month: m }
-}
+/** Hamro Patro–style translucent dark so wallpaper shows through. */
+const theme = {
+  bg: '#CC1C1816',
+  surface: '#33FFFFFF',
+  text: '#F7F1E6',
+  textMuted: '#B8AFA0',
+  accent: '#E8C27A',
+  selected: '#9B1C31',
+  selectedText: '#FFF8EC',
+  saturday: '#F07070',
+  todayBorder: '#6F9473',
+} as const
 
 export function buildWidgetSnapshot(input?: {
   visibleYear?: number
@@ -52,9 +51,12 @@ export function buildWidgetSnapshot(input?: {
   const today = todayResult.value
   const visibleYear = input?.visibleYear ?? today.bs.year
   const visibleMonth = input?.visibleMonth ?? today.bs.month
-  const selected = input?.selected ?? today.bs
   const month = getMonth(visibleYear, visibleMonth)
   if (!month.ok) throw new Error(month.error.message)
+
+  const rawSelected = input?.selected ?? today.bs
+  const selected = clampSelectedToVisibleMonth(rawSelected, visibleYear, visibleMonth)
+
   return {
     visibleYear,
     visibleMonth,
@@ -66,208 +68,149 @@ export function buildWidgetSnapshot(input?: {
   }
 }
 
-function selectedDay(snapshot: WidgetSnapshot): CalendarDay {
-  const found = snapshot.days.find(
-    (d) =>
-      d.bs.year === snapshot.selected.year &&
-      d.bs.month === snapshot.selected.month &&
-      d.bs.day === snapshot.selected.day,
-  )
-  if (found) return found
-  const day = getDay(snapshot.selected)
-  if (day.ok) return day.value
-  return snapshot.today
+function visibleMonthLabel(snapshot: WidgetSnapshot): string {
+  const name = BS_MONTH_NAMES_NP[snapshot.visibleMonth - 1] ?? ''
+  return `${name} ${formatNumber(snapshot.visibleYear, 'devanagari')}`
 }
 
-const cream = '#FFF8EC'
-const charcoal = '#252525'
-const deepRed = '#9B1C31'
-const gold = '#D4A84F'
-const muted = '#5C5C5C'
-
-export function MitiSmallWidget({ snapshot }: { snapshot: WidgetSnapshot }) {
-  const day = selectedDay(snapshot)
-  return (
-    <FlexWidget
-      clickAction="OPEN_URI"
-      clickActionData={{ uri: `miti://calendar?bs=${day.bs.year}-${day.bs.month}-${day.bs.day}` }}
-      style={{
-        height: 'match_parent',
-        width: 'match_parent',
-        backgroundColor: cream,
-        padding: 12,
-        flexDirection: 'column',
-        justifyContent: 'center',
-      }}
-    >
-      <TextWidget
-        text={`${day.bs.monthNameNp} ${formatNumber(day.bs.year, 'devanagari')}`}
-        style={{ fontSize: 12, color: muted }}
-      />
-      <TextWidget
-        text={formatNumber(day.bs.day, 'devanagari')}
-        style={{ fontSize: 34, color: charcoal, fontWeight: '700' }}
-      />
-      <TextWidget
-        text={`${day.ad.monthNameEn.slice(0, 3)} ${day.ad.day}`}
-        style={{ fontSize: 13, color: muted }}
-      />
-      {snapshot.festivalTitle ? (
-        <TextWidget
-          text={`✦ ${snapshot.festivalTitle}`}
-          style={{ fontSize: 12, color: gold, marginTop: 6 }}
-        />
-      ) : null}
-    </FlexWidget>
-  )
-}
-
-export function MitiMediumWidget({ snapshot }: { snapshot: WidgetSnapshot }) {
-  const day = selectedDay(snapshot)
-  const preview = snapshot.days.slice(0, 7)
-
-  return (
-    <FlexWidget
-      style={{
-        height: 'match_parent',
-        width: 'match_parent',
-        backgroundColor: cream,
-        padding: 10,
-        flexDirection: 'column',
-      }}
-    >
-      <FlexWidget
-        style={{
-          flexDirection: 'row',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          width: 'match_parent',
-        }}
-      >
-        <FlexWidget clickAction="PREV_MONTH" style={{ padding: 8 }}>
-          <TextWidget text="‹" style={{ fontSize: 22, color: charcoal }} />
-        </FlexWidget>
-        <FlexWidget style={{ flexDirection: 'column', alignItems: 'center' }}>
-          <TextWidget
-            text={`${day.bs.monthNameNp} ${formatNumber(snapshot.visibleYear, 'devanagari')}`}
-            style={{ fontSize: 14, color: charcoal, fontWeight: '700' }}
-          />
-          <TextWidget
-            text={`${formatNumber(day.bs.day, 'devanagari')} · ${day.ad.monthNameEn} ${day.ad.day}`}
-            style={{ fontSize: 12, color: muted }}
-          />
-        </FlexWidget>
-        <FlexWidget clickAction="NEXT_MONTH" style={{ padding: 8 }}>
-          <TextWidget text="›" style={{ fontSize: 22, color: charcoal }} />
-        </FlexWidget>
-      </FlexWidget>
-
-      <FlexWidget style={{ flexDirection: 'row', marginTop: 8, width: 'match_parent' }}>
-        {preview.map((cell) => {
-          const selected =
-            cell.bs.day === snapshot.selected.day &&
-            cell.bs.month === snapshot.selected.month &&
-            cell.bs.year === snapshot.selected.year
-          return (
-            <FlexWidget
-              key={`${cell.bs.year}-${cell.bs.month}-${cell.bs.day}`}
-              clickAction="SELECT_DATE"
-              clickActionData={{
-                year: cell.bs.year,
-                month: cell.bs.month,
-                day: cell.bs.day,
-              }}
-              style={{
-                flex: 1,
-                alignItems: 'center',
-                paddingVertical: 4,
-                backgroundColor: selected ? deepRed : '#00000000',
-                borderRadius: 8,
-              }}
-            >
-              <TextWidget
-                text={formatNumber(cell.bs.day, 'devanagari')}
-                style={{ fontSize: 14, color: selected ? '#FFFFFF' : charcoal, fontWeight: '700' }}
-              />
-              <TextWidget
-                text={String(cell.ad.day)}
-                style={{ fontSize: 10, color: selected ? '#FFFFFF' : muted }}
-              />
-            </FlexWidget>
-          )
-        })}
-      </FlexWidget>
-
-      {snapshot.festivalTitle ? (
-        <TextWidget
-          text={`✦ ${snapshot.festivalTitle}`}
-          style={{ fontSize: 12, color: gold, marginTop: 8 }}
-        />
-      ) : (
-        <TextWidget text=" " style={{ fontSize: 12, marginTop: 8 }} />
-      )}
-    </FlexWidget>
-  )
-}
-
-export function MitiLargeWidget({ snapshot }: { snapshot: WidgetSnapshot }) {
-  const day = selectedDay(snapshot)
+function visibleAdRange(snapshot: WidgetSnapshot): string {
   const first = snapshot.days[0]
+  const last = snapshot.days[snapshot.days.length - 1]
+  if (!first || !last) return ''
+  if (first.ad.month === last.ad.month) {
+    return first.ad.monthNameEn.slice(0, 3)
+  }
+  return `${first.ad.monthNameEn.slice(0, 3)}/${last.ad.monthNameEn.slice(0, 3)}`
+}
+
+function selectedDayInVisibleMonth(snapshot: WidgetSnapshot): CalendarDay {
+  const found = snapshot.days.find((d) => d.bs.day === snapshot.selected.day)
+  if (found) return found
+  return snapshot.days[0] ?? snapshot.today
+}
+
+function buildMonthCells(days: CalendarDay[]): Array<CalendarDay | null> {
+  const first = days[0]
   const leading = first?.weekday.index ?? 0
   const cells: Array<CalendarDay | null> = []
   for (let i = 0; i < leading; i += 1) cells.push(null)
-  for (const d of snapshot.days) cells.push(d)
+  for (const d of days) cells.push(d)
   while (cells.length % 7 !== 0) cells.push(null)
+  return cells
+}
 
+function MonthHeader({ snapshot }: { snapshot: WidgetSnapshot }) {
+  return (
+    <FlexWidget
+      style={{
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        width: 'match_parent',
+        marginBottom: 4,
+      }}
+    >
+      <FlexWidget
+        clickAction="PREV_MONTH"
+        style={{
+          width: 36,
+          height: 36,
+          borderRadius: 18,
+          backgroundColor: theme.surface,
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <TextWidget text="‹" style={{ fontSize: 22, color: theme.text }} />
+      </FlexWidget>
+
+      <FlexWidget style={{ flexDirection: 'column', alignItems: 'center', flex: 1 }}>
+        <TextWidget
+          text={visibleMonthLabel(snapshot)}
+          style={{ fontSize: 16, color: theme.text, fontWeight: '700' }}
+        />
+        <TextWidget
+          text={visibleAdRange(snapshot)}
+          style={{ fontSize: 11, color: theme.textMuted }}
+        />
+      </FlexWidget>
+
+      <FlexWidget
+        clickAction="NEXT_MONTH"
+        style={{
+          width: 36,
+          height: 36,
+          borderRadius: 18,
+          backgroundColor: theme.surface,
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <TextWidget text="›" style={{ fontSize: 22, color: theme.text }} />
+      </FlexWidget>
+    </FlexWidget>
+  )
+}
+
+function WeekdayRow({ compact }: { compact?: boolean }) {
+  return (
+    <FlexWidget style={{ flexDirection: 'row', width: 'match_parent', marginBottom: 2 }}>
+      {WEEKDAYS.map((weekday) => (
+        <FlexWidget key={weekday.index} style={{ flex: 1, alignItems: 'center' }}>
+          <TextWidget
+            text={weekday.shortNp.slice(0, compact ? 2 : 3)}
+            style={{
+              fontSize: compact ? 9 : 10,
+              color: weekday.index === 6 ? theme.saturday : theme.textMuted,
+              fontWeight: '600',
+            }}
+          />
+        </FlexWidget>
+      ))}
+    </FlexWidget>
+  )
+}
+
+function MonthGrid({
+  snapshot,
+  cellHeight,
+  compact,
+}: {
+  snapshot: WidgetSnapshot
+  cellHeight: number
+  compact?: boolean
+}) {
+  const cells = buildMonthCells(snapshot.days)
   const rows: Array<Array<CalendarDay | null>> = []
   for (let i = 0; i < cells.length; i += 7) {
     rows.push(cells.slice(i, i + 7))
   }
 
   return (
-    <FlexWidget
-      style={{
-        height: 'match_parent',
-        width: 'match_parent',
-        backgroundColor: cream,
-        padding: 10,
-        flexDirection: 'column',
-      }}
-    >
-      <FlexWidget
-        style={{
-          flexDirection: 'row',
-          justifyContent: 'space-between',
-          width: 'match_parent',
-          alignItems: 'center',
-        }}
-      >
-        <FlexWidget clickAction="PREV_MONTH" style={{ padding: 6 }}>
-          <TextWidget text="‹" style={{ fontSize: 22, color: charcoal }} />
-        </FlexWidget>
-        <TextWidget
-          text={`${day.bs.monthNameNp} ${formatNumber(snapshot.visibleYear, 'devanagari')}`}
-          style={{ fontSize: 16, color: charcoal, fontWeight: '700' }}
-        />
-        <FlexWidget clickAction="NEXT_MONTH" style={{ padding: 6 }}>
-          <TextWidget text="›" style={{ fontSize: 22, color: charcoal }} />
-        </FlexWidget>
-      </FlexWidget>
-
+    <FlexWidget style={{ flexDirection: 'column', width: 'match_parent', flex: 1 }}>
+      <WeekdayRow compact={compact} />
       {rows.map((row, rowIndex) => (
         <FlexWidget key={`row-${rowIndex}`} style={{ flexDirection: 'row', width: 'match_parent' }}>
           {row.map((cell, colIndex) => {
             if (!cell) {
               return (
-                <FlexWidget key={`e-${rowIndex}-${colIndex}`} style={{ flex: 1, height: 34 }} />
+                <FlexWidget
+                  key={`e-${rowIndex}-${colIndex}`}
+                  style={{ flex: 1, height: cellHeight }}
+                />
               )
             }
             const selected =
               cell.bs.day === snapshot.selected.day &&
               cell.bs.month === snapshot.selected.month &&
               cell.bs.year === snapshot.selected.year
+            const isToday =
+              cell.bs.day === snapshot.today.bs.day &&
+              cell.bs.month === snapshot.today.bs.month &&
+              cell.bs.year === snapshot.today.bs.year
             const key = `${cell.bs.year}-${String(cell.bs.month).padStart(2, '0')}-${String(cell.bs.day).padStart(2, '0')}`
             const hasFestival = snapshot.festivalDays.has(key)
+            const isSaturday = cell.weekday.index === 6
             return (
               <FlexWidget
                 key={key}
@@ -279,46 +222,151 @@ export function MitiLargeWidget({ snapshot }: { snapshot: WidgetSnapshot }) {
                 }}
                 style={{
                   flex: 1,
+                  height: cellHeight,
                   alignItems: 'center',
                   justifyContent: 'center',
-                  height: 34,
-                  backgroundColor: selected ? deepRed : '#00000000',
-                  borderRadius: 6,
+                  backgroundColor: selected ? theme.selected : '#00000000',
+                  borderRadius: 8,
+                  borderWidth: isToday && !selected ? 1 : 0,
+                  borderColor: theme.todayBorder,
                 }}
               >
                 <TextWidget
                   text={formatNumber(cell.bs.day, 'devanagari')}
                   style={{
-                    fontSize: 12,
-                    color: selected ? '#FFFFFF' : charcoal,
+                    fontSize: compact ? 11 : 13,
+                    color: selected
+                      ? theme.selectedText
+                      : isSaturday
+                        ? theme.saturday
+                        : theme.text,
                     fontWeight: '700',
                   }}
                 />
                 <TextWidget
-                  text={hasFestival ? '•' : String(cell.ad.day)}
-                  style={{ fontSize: 9, color: selected ? '#FFFFFF' : hasFestival ? gold : muted }}
+                  text={String(cell.ad.day)}
+                  style={{
+                    fontSize: compact ? 8 : 9,
+                    color: selected
+                      ? theme.selectedText
+                      : hasFestival
+                        ? theme.accent
+                        : theme.textMuted,
+                  }}
                 />
               </FlexWidget>
             )
           })}
         </FlexWidget>
       ))}
-
-      <TextWidget
-        text={`${formatNumber(day.bs.day, 'devanagari')} ${day.bs.monthNameNp} · ${day.weekday.nameEn}`}
-        style={{ fontSize: 12, color: charcoal, marginTop: 6 }}
-      />
-      {snapshot.festivalTitle ? (
-        <TextWidget text={`✦ ${snapshot.festivalTitle}`} style={{ fontSize: 12, color: gold }} />
-      ) : null}
     </FlexWidget>
   )
 }
 
-export function shiftMonth(
-  year: number,
-  month: number,
-  delta: number,
-): { year: number; month: number } {
-  return clamp(year, month + delta)
+export function MitiSmallWidget({ snapshot }: { snapshot: WidgetSnapshot }) {
+  const day =
+    snapshot.today.bs.year === snapshot.visibleYear &&
+    snapshot.today.bs.month === snapshot.visibleMonth
+      ? snapshot.today
+      : selectedDayInVisibleMonth(snapshot)
+
+  return (
+    <FlexWidget
+      clickAction="OPEN_URI"
+      clickActionData={{ uri: `miti://calendar?bs=${day.bs.year}-${day.bs.month}-${day.bs.day}` }}
+      style={{
+        height: 'match_parent',
+        width: 'match_parent',
+        backgroundColor: theme.bg,
+        borderRadius: 20,
+        padding: 12,
+        flexDirection: 'column',
+        justifyContent: 'space-between',
+      }}
+    >
+      <TextWidget
+        text={`${day.bs.monthNameNp} ${formatNumber(day.bs.year, 'devanagari')}`}
+        style={{ fontSize: 12, color: theme.textMuted }}
+      />
+      <TextWidget
+        text={formatNumber(day.bs.day, 'devanagari')}
+        style={{ fontSize: 40, color: theme.text, fontWeight: '700' }}
+      />
+      <FlexWidget style={{ flexDirection: 'column' }}>
+        <TextWidget
+          text={`${day.ad.monthNameEn.slice(0, 3)} ${day.ad.day} · ${day.weekday.shortEn}`}
+          style={{ fontSize: 12, color: theme.textMuted }}
+        />
+        {snapshot.festivalTitle ? (
+          <TextWidget
+            text={`✦ ${snapshot.festivalTitle}`}
+            style={{ fontSize: 11, color: theme.accent, marginTop: 4 }}
+          />
+        ) : null}
+      </FlexWidget>
+    </FlexWidget>
+  )
+}
+
+export function MitiMediumWidget({ snapshot }: { snapshot: WidgetSnapshot }) {
+  const day = selectedDayInVisibleMonth(snapshot)
+  return (
+    <FlexWidget
+      style={{
+        height: 'match_parent',
+        width: 'match_parent',
+        backgroundColor: theme.bg,
+        borderRadius: 20,
+        padding: 10,
+        flexDirection: 'column',
+      }}
+    >
+      <MonthHeader snapshot={snapshot} />
+      <MonthGrid snapshot={snapshot} cellHeight={28} compact />
+      <TextWidget
+        text={
+          snapshot.festivalTitle
+            ? `✦ ${snapshot.festivalTitle}`
+            : `${formatNumber(day.bs.day, 'devanagari')} ${day.bs.monthNameNp} · ${day.weekday.nameEn}`
+        }
+        style={{ fontSize: 11, color: snapshot.festivalTitle ? theme.accent : theme.textMuted, marginTop: 4 }}
+      />
+    </FlexWidget>
+  )
+}
+
+export function MitiLargeWidget({ snapshot }: { snapshot: WidgetSnapshot }) {
+  const day = selectedDayInVisibleMonth(snapshot)
+  return (
+    <FlexWidget
+      style={{
+        height: 'match_parent',
+        width: 'match_parent',
+        backgroundColor: theme.bg,
+        borderRadius: 22,
+        padding: 12,
+        flexDirection: 'column',
+      }}
+    >
+      <MonthHeader snapshot={snapshot} />
+      <MonthGrid snapshot={snapshot} cellHeight={36} />
+      <FlexWidget style={{ flexDirection: 'column', marginTop: 6 }}>
+        <TextWidget
+          text={`${formatNumber(day.bs.day, 'devanagari')} ${day.bs.monthNameNp} · ${day.weekday.nameEn}`}
+          style={{ fontSize: 13, color: theme.text, fontWeight: '600' }}
+        />
+        {snapshot.festivalTitle ? (
+          <TextWidget
+            text={`✦ ${snapshot.festivalTitle}`}
+            style={{ fontSize: 12, color: theme.accent, marginTop: 2 }}
+          />
+        ) : (
+          <TextWidget
+            text={`${day.ad.monthNameEn} ${day.ad.day}, ${day.ad.year}`}
+            style={{ fontSize: 11, color: theme.textMuted, marginTop: 2 }}
+          />
+        )}
+      </FlexWidget>
+    </FlexWidget>
+  )
 }
