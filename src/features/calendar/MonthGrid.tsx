@@ -1,10 +1,12 @@
-import { StyleSheet, Text, useWindowDimensions, View } from 'react-native'
 import type { CalendarDay } from '@/src/domain/calendar'
 import { WEEKDAYS } from '@/src/domain/calendar'
-import { DateCell } from './DateCell'
-import { useTheme } from '@/src/theme/ThemeProvider'
 import { bsKey } from '@/src/stores/calendarStore'
+import { useSettingsStore } from '@/src/stores/settingsStore'
+import { useTheme } from '@/src/theme/ThemeProvider'
 import type { NumeralSystem } from '@/src/utils/numerals'
+import { StyleSheet, Text, useWindowDimensions, View } from 'react-native'
+import { DateCell } from './DateCell'
+import { isSpecialBsDay } from './easterEgg'
 
 type Props = {
   days: CalendarDay[]
@@ -43,6 +45,7 @@ export function MonthGrid({
   onSelect,
 }: Props) {
   const theme = useTheme()
+  const specialDay = useSettingsStore((s) => s.specialDay)
   const { width } = useWindowDimensions()
   const horizontalPadding = 32
   const cellWidth = (width - horizontalPadding) / 7
@@ -77,6 +80,7 @@ export function MonthGrid({
                 selected={!!day && key === selectedKey}
                 isToday={!!day && key === todayKey}
                 hasFestival={!!day && festivalMarkers.has(key)}
+                isSpecialDay={!!day && isSpecialBsDay(day.bs, specialDay)}
                 numeralSystem={numeralSystem}
                 onPress={onSelect}
               />

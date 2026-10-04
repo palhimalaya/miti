@@ -3,6 +3,7 @@ import { db } from '../client'
 import { settings } from '../schema'
 import type { NumeralSystem } from '@/src/utils/numerals'
 import type { ThemeMode } from '@/src/theme'
+import type { SpecialDay } from '@/src/features/calendar/easterEgg'
 
 export type AppSettings = {
   numeralSystem: NumeralSystem
@@ -11,6 +12,8 @@ export type AppSettings = {
   weekStartsOn: 0
   widgetShowPersonal: boolean
   timezonePolicy: 'asia_kathmandu'
+  /** Personal easter-egg day (BS month/day + note). Local only. */
+  specialDay: SpecialDay | null
 }
 
 const DEFAULTS: AppSettings = {
@@ -20,6 +23,7 @@ const DEFAULTS: AppSettings = {
   weekStartsOn: 0,
   widgetShowPersonal: false,
   timezonePolicy: 'asia_kathmandu',
+  specialDay: null,
 }
 
 function nowIso() {
@@ -45,6 +49,7 @@ export async function loadSettings(): Promise<AppSettings> {
     weekStartsOn: await getJson('week_starts_on', DEFAULTS.weekStartsOn),
     widgetShowPersonal: await getJson('widget_show_personal', DEFAULTS.widgetShowPersonal),
     timezonePolicy: await getJson('timezone_policy', DEFAULTS.timezonePolicy),
+    specialDay: await getJson('special_day', DEFAULTS.specialDay),
   }
 }
 
@@ -59,6 +64,7 @@ export async function saveSetting<K extends keyof AppSettings>(
     weekStartsOn: 'week_starts_on',
     widgetShowPersonal: 'widget_show_personal',
     timezonePolicy: 'timezone_policy',
+    specialDay: 'special_day',
   }
   await saveJsonSetting(map[key], value)
 }

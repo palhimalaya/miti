@@ -4,6 +4,7 @@ import {
   saveSetting,
   type AppSettings,
 } from '@/src/db/repositories/settings'
+import { normalizeSpecialDay, type SpecialDay } from '@/src/features/calendar/easterEgg'
 
 type SettingsState = AppSettings & {
   hydrated: boolean
@@ -12,6 +13,7 @@ type SettingsState = AppSettings & {
   setTheme: (value: AppSettings['theme']) => Promise<void>
   setUiLanguage: (value: AppSettings['uiLanguage']) => Promise<void>
   setWidgetShowPersonal: (value: boolean) => Promise<void>
+  setSpecialDay: (value: SpecialDay | null) => Promise<void>
 }
 
 export const useSettingsStore = create<SettingsState>((set) => ({
@@ -21,6 +23,7 @@ export const useSettingsStore = create<SettingsState>((set) => ({
   weekStartsOn: 0,
   widgetShowPersonal: false,
   timezonePolicy: 'asia_kathmandu',
+  specialDay: null,
   hydrated: false,
   hydrate: async () => {
     const settings = await loadSettings()
@@ -41,5 +44,16 @@ export const useSettingsStore = create<SettingsState>((set) => ({
   setWidgetShowPersonal: async (value) => {
     await saveSetting('widgetShowPersonal', value)
     set({ widgetShowPersonal: value })
+  },
+  setSpecialDay: async (value) => {
+    const next = value
+      ? normalizeSpecialDay({
+          bsMonth: value.bsMonth,
+          bsDay: value.bsDay,
+          note: value.note,
+        })
+      : null
+    await saveSetting('specialDay', next)
+    set({ specialDay: next })
   },
 }))

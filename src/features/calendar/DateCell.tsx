@@ -9,6 +9,7 @@ type Props = {
   selected: boolean
   isToday: boolean
   hasFestival: boolean
+  isSpecialDay?: boolean
   numeralSystem: NumeralSystem
   onPress?: (day: CalendarDay) => void
 }
@@ -19,6 +20,7 @@ export function DateCell({
   selected,
   isToday,
   hasFestival,
+  isSpecialDay = false,
   numeralSystem,
   onPress,
 }: Props) {
@@ -27,6 +29,9 @@ export function DateCell({
   if (!day) {
     return <View style={[styles.cell, { width }]} />
   }
+
+  // Nearly invisible gold whisper — no label.
+  const secretWhisper = isSpecialDay && !selected && !isToday
 
   return (
     <Pressable
@@ -42,8 +47,12 @@ export function DateCell({
             : isToday
               ? theme.colors.bgMuted
               : 'transparent',
-          borderColor: isToday && !selected ? theme.colors.today : 'transparent',
-          borderWidth: isToday && !selected ? 1.5 : 0,
+          borderColor: secretWhisper
+            ? theme.colors.festive
+            : isToday && !selected
+              ? theme.colors.today
+              : 'transparent',
+          borderWidth: secretWhisper ? StyleSheet.hairlineWidth : isToday && !selected ? 1.5 : 0,
           borderRadius: theme.radii.md,
         },
       ]}
