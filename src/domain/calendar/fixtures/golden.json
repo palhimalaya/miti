@@ -1,0 +1,66 @@
+{
+  "meta": {
+    "weekdayIndex": "0=Sunday",
+    "range": { "minBsYear": 2000, "maxBsYear": 2099 },
+    "notes": [
+      "Anchors verified against vendored month-length table + Baishakh-1 AD ISO dates.",
+      "BS 2082-01-01 matches upstream @sushill/bikram-sambat test expectation.",
+      "BS 2083-06-18 matches Miti PRD example (October 4, 2026)."
+    ]
+  },
+  "bsToAd": [
+    { "bs": { "year": 2000, "month": 1, "day": 1 }, "ad": { "year": 1943, "month": 4, "day": 14 } },
+    { "bs": { "year": 2082, "month": 1, "day": 1 }, "ad": { "year": 2025, "month": 4, "day": 14 } },
+    { "bs": { "year": 2083, "month": 1, "day": 1 }, "ad": { "year": 2026, "month": 4, "day": 14 } },
+    { "bs": { "year": 2083, "month": 6, "day": 18 }, "ad": { "year": 2026, "month": 10, "day": 4 } },
+    { "bs": { "year": 2099, "month": 12, "day": 31 }, "ad": { "year": 2043, "month": 4, "day": 14 } }
+  ],
+  "adToBs": [
+    { "ad": { "year": 1943, "month": 4, "day": 14 }, "bs": { "year": 2000, "month": 1, "day": 1 } },
+    { "ad": { "year": 2025, "month": 4, "day": 14 }, "bs": { "year": 2082, "month": 1, "day": 1 } },
+    { "ad": { "year": 2026, "month": 10, "day": 4 }, "bs": { "year": 2083, "month": 6, "day": 18 } },
+    { "ad": { "year": 2043, "month": 4, "day": 14 }, "bs": { "year": 2099, "month": 12, "day": 31 } }
+  ],
+  "monthLengths": [
+    { "year": 2082, "month": 1, "days": 31 },
+    { "year": 2082, "month": 2, "days": 31 },
+    { "year": 2082, "month": 3, "days": 31 },
+    { "year": 2082, "month": 4, "days": 32 },
+    { "year": 2083, "month": 6, "days": 31 },
+    { "year": 2087, "month": 1, "days": 31, "note": "BS 2087 year length is 367 in this dataset" },
+    { "year": 2096, "month": 1, "days": 30, "note": "BS 2096 year length is 364 in this dataset" }
+  ],
+  "boundaries": [
+    {
+      "name": "Chaitra 2082 end → Baishakh 2083",
+      "from": { "year": 2082, "month": 12, "day": 30 },
+      "next": { "year": 2083, "month": 1, "day": 1 }
+    },
+    {
+      "name": "Ashwin 2083 first/last paired AD",
+      "first": { "bs": { "year": 2083, "month": 6, "day": 1 }, "ad": { "year": 2026, "month": 9, "day": 17 } },
+      "last": { "bs": { "year": 2083, "month": 6, "day": 31 }, "ad": { "year": 2026, "month": 10, "day": 17 } }
+    }
+  ],
+  "weekdays": [
+    {
+      "bs": { "year": 2083, "month": 6, "day": 18 },
+      "ad": { "year": 2026, "month": 10, "day": 4 },
+      "weekdayIndex": 0,
+      "nameEn": "Sunday"
+    }
+  ],
+  "invalidBs": [
+    { "year": 1999, "month": 1, "day": 1, "code": "BS_OUT_OF_RANGE" },
+    { "year": 2100, "month": 1, "day": 1, "code": "BS_OUT_OF_RANGE" },
+    { "year": 2083, "month": 0, "day": 1, "code": "INVALID_BS_DATE" },
+    { "year": 2083, "month": 13, "day": 1, "code": "INVALID_BS_DATE" },
+    { "year": 2082, "month": 12, "day": 31, "code": "INVALID_BS_DATE" },
+    { "year": 2083, "month": 6, "day": 32, "code": "INVALID_BS_DATE" }
+  ],
+  "invalidAd": [
+    { "year": 1943, "month": 4, "day": 13, "code": "AD_OUT_OF_RANGE" },
+    { "year": 2043, "month": 4, "day": 15, "code": "AD_OUT_OF_RANGE" },
+    { "year": 2026, "month": 2, "day": 30, "code": "INVALID_AD_DATE" }
+  ]
+}

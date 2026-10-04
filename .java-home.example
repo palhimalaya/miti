@@ -1,0 +1,7 @@
+# Android native builds require JDK 17 (not 21/25).
+# This machine already has Temurin 17 at:
+#   /home/cosine/.jdks/temurin-17
+#
+# Before `npx expo run:android` or Gradle:
+#   export JAVA_HOME=/home/cosine/.jdks/temurin-17
+#   export PATH="$JAVA_HOME/bin:$PATH"
