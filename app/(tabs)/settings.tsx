@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import {
   ActivityIndicator,
   Pressable,
@@ -12,7 +12,10 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { BS_MONTH_NAMES_NP } from '@/src/domain/calendar'
 import { useSettingsStore } from '@/src/stores/settingsStore'
 import { useTheme } from '@/src/theme/ThemeProvider'
-import { scheduleLocalReminders } from '@/src/services/notifications'
+import {
+  scheduleLocalReminders,
+  syncTodayNotificationBar,
+} from '@/src/services/notifications'
 import { refreshWidgets } from '@/src/features/widget/refreshWidgets'
 import {
   checkForAppUpdate,
@@ -23,32 +26,82 @@ import { UpdateAvailableCard } from '@/src/features/update/UpdateAvailableCard'
 import { DEFAULT_SPECIAL_NOTE } from '@/src/features/calendar/easterEgg'
 import { formatNumber } from '@/src/utils/numerals'
 
-function OptionRow({
+function OptionChip({
   label,
   active,
   onPress,
+  compact,
 }: {
   label: string
   active: boolean
   onPress: () => void
+  compact?: boolean
 }) {
   const theme = useTheme()
   return (
     <Pressable
       onPress={onPress}
       style={[
-        styles.option,
+        compact ? styles.chipCompact : styles.chip,
         {
           backgroundColor: active ? theme.colors.primary : theme.colors.bgMuted,
         },
       ]}
     >
-      <Text style={{ color: active ? theme.colors.primaryText : theme.colors.textPrimary }}>
+      <Text
+        style={{
+          color: active ? theme.colors.primaryText : theme.colors.textPrimary,
+          fontSize: compact ? 13 : 15,
+          fontWeight: active ? '700' : '500',
+        }}
+      >
         {label}
       </Text>
     </Pressable>
   )
 }
+
+function SettingsCard({
+  title,
+  subtitle,
+  expanded,
+  onToggle,
+  children,
+}: {
+  title: string
+  subtitle?: string
+  expanded: boolean
+  onToggle: () => void
+  children: ReactNode
+}) {
+  const theme = useTheme()
+  return (
+    <View
+      style={[
+        styles.card,
+        {
+          backgroundColor: theme.colors.bgSurface,
+          borderColor: theme.colors.borderSubtle,
+        },
+      ]}
+    >
+      <Pressable onPress={onToggle} style={styles.cardHeader} accessibilityRole="button">
+        <View style={{ flex: 1, gap: 2 }}>
+          <Text style={[styles.cardTitle, { color: theme.colors.textPrimary }]}>{title}</Text>
+          {subtitle ? (
+            <Text style={{ color: theme.colors.textSecondary, fontSize: 13 }}>{subtitle}</Text>
+          ) : null}
+        </View>
+        <Text style={{ color: theme.colors.textSecondary, fontSize: 18 }}>
+          {expanded ? '▾' : '▸'}
+        </Text>
+      </Pressable>
+      {expanded ? <View style={styles.cardBody}>{children}</View> : null}
+    </View>
+  )
+}
+
+type SectionKey = 'appearance' | 'home' | 'special' | 'about'
 
 export default function SettingsScreen() {
   const theme = useTheme()
@@ -57,11 +110,13 @@ export default function SettingsScreen() {
     theme: themeSetting,
     uiLanguage,
     widgetShowPersonal,
+    showTodayNotificationBar,
     specialDay,
     setNumeralSystem,
     setTheme,
     setUiLanguage,
     setWidgetShowPersonal,
+    setShowTodayNotificationBar,
     setSpecialDay,
   } = useSettingsStore()
   const [checkingUpdate, setCheckingUpdate] = useState(false)
@@ -70,6 +125,12 @@ export default function SettingsScreen() {
   const [draftMonth, setDraftMonth] = useState(specialDay?.bsMonth ?? 4)
   const [draftDay, setDraftDay] = useState(specialDay?.bsDay ?? 14)
   const [draftNote, setDraftNote] = useState(specialDay?.note ?? DEFAULT_SPECIAL_NOTE)
+  const [open, setOpen] = useState<Record<SectionKey, boolean>>({
+    appearance: true,
+    home: false,
+    special: false,
+    about: false,
+  })
 
   useEffect(() => {
     setDraftMonth(specialDay?.bsMonth ?? 4)
@@ -77,214 +138,269 @@ export default function SettingsScreen() {
     setDraftNote(specialDay?.note ?? DEFAULT_SPECIAL_NOTE)
   }, [specialDay])
 
+  const toggle = (key: SectionKey) => {
+    setOpen((prev) => ({ ...prev, [key]: !prev[key] }))
+  }
+
+  const specialSummary = specialDay
+    ? `${BS_MONTH_NAMES_NP[specialDay.bsMonth - 1]} ${formatNumber(specialDay.bsDay, numeralSystem)}`
+    : 'Not set'
+
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: theme.colors.bgCanvas }]} edges={['bottom']}>
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={[theme.typography.titleBs, { color: theme.colors.textPrimary }]}>Settings</Text>
         <Text style={[theme.typography.subtitleAd, { color: theme.colors.textSecondary }]}>
-          Bilingual · Nepali-first · Asia/Kathmandu today
+          Appearance, home screen, and private extras
         </Text>
 
-        <Text style={[styles.section, { color: theme.colors.textSecondary }]}>Numerals</Text>
-        <View style={styles.row}>
-          <OptionRow
-            label="नेपाली १८"
-            active={numeralSystem === 'devanagari'}
-            onPress={() => {
-              void setNumeralSystem('devanagari').then(() => refreshWidgets())
-            }}
-          />
-          <OptionRow
-            label="Arabic 18"
-            active={numeralSystem === 'arabic'}
-            onPress={() => {
-              void setNumeralSystem('arabic').then(() => refreshWidgets())
-            }}
-          />
-        </View>
-
-        <Text style={[styles.section, { color: theme.colors.textSecondary }]}>Theme</Text>
-        <View style={styles.row}>
-          {(['system', 'light', 'dark'] as const).map((value) => (
-            <OptionRow
-              key={value}
-              label={value}
-              active={themeSetting === value}
-              onPress={() => {
-                void setTheme(value)
-              }}
-            />
-          ))}
-        </View>
-
-        <Text style={[styles.section, { color: theme.colors.textSecondary }]}>Language</Text>
-        <View style={styles.row}>
-          {(
-            [
-              ['bilingual', 'Bilingual'],
-              ['np', 'नेपाली'],
-              ['en', 'English'],
-            ] as const
-          ).map(([value, label]) => (
-            <OptionRow
-              key={value}
-              label={label}
-              active={uiLanguage === value}
-              onPress={() => {
-                void setUiLanguage(value)
-              }}
-            />
-          ))}
-        </View>
-
-        <Text style={[styles.section, { color: theme.colors.textSecondary }]}>Widget privacy</Text>
-        <View style={styles.row}>
-          <OptionRow
-            label="Hide personal titles"
-            active={!widgetShowPersonal}
-            onPress={() => {
-              void setWidgetShowPersonal(false).then(() => refreshWidgets())
-            }}
-          />
-          <OptionRow
-            label="Show personal titles"
-            active={widgetShowPersonal}
-            onPress={() => {
-              void setWidgetShowPersonal(true).then(() => refreshWidgets())
-            }}
-          />
-        </View>
-
-        <Text style={[styles.section, { color: theme.colors.textSecondary }]}>
-          Special day (private)
-        </Text>
-        <Text style={{ color: theme.colors.textSecondary, marginBottom: 4 }}>
-          Pick a BS month/day. It gets a quiet gold edge on the grid. Triple-tap the day title to
-          reveal your note. Stored only on this device.
-        </Text>
-        <Text style={[styles.subLabel, { color: theme.colors.textAdSecondary }]}>Month</Text>
-        <View style={styles.row}>
-          {BS_MONTH_NAMES_NP.map((name, index) => {
-            const month = index + 1
-            return (
-              <OptionRow
-                key={name}
-                label={name}
-                active={draftMonth === month}
-                onPress={() => setDraftMonth(month)}
+        <SettingsCard
+          title="Appearance"
+          subtitle="Theme, language, numerals"
+          expanded={open.appearance}
+          onToggle={() => toggle('appearance')}
+        >
+          <Text style={[styles.groupLabel, { color: theme.colors.textAdSecondary }]}>Theme</Text>
+          <View style={styles.row}>
+            {(['system', 'light', 'dark'] as const).map((value) => (
+              <OptionChip
+                key={value}
+                label={value}
+                active={themeSetting === value}
+                onPress={() => {
+                  void setTheme(value)
+                }}
               />
-            )
-          })}
-        </View>
-        <Text style={[styles.subLabel, { color: theme.colors.textAdSecondary }]}>Day</Text>
-        <View style={styles.row}>
-          {Array.from({ length: 32 }, (_, i) => i + 1).map((day) => (
-            <OptionRow
-              key={day}
-              label={formatNumber(day, numeralSystem)}
-              active={draftDay === day}
-              onPress={() => setDraftDay(day)}
+            ))}
+          </View>
+
+          <Text style={[styles.groupLabel, { color: theme.colors.textAdSecondary }]}>Language</Text>
+          <View style={styles.row}>
+            {(
+              [
+                ['bilingual', 'Bilingual'],
+                ['np', 'नेपाली'],
+                ['en', 'English'],
+              ] as const
+            ).map(([value, label]) => (
+              <OptionChip
+                key={value}
+                label={label}
+                active={uiLanguage === value}
+                onPress={() => {
+                  void setUiLanguage(value)
+                }}
+              />
+            ))}
+          </View>
+
+          <Text style={[styles.groupLabel, { color: theme.colors.textAdSecondary }]}>Numerals</Text>
+          <View style={styles.row}>
+            <OptionChip
+              label="नेपाली १८"
+              active={numeralSystem === 'devanagari'}
+              onPress={() => {
+                void setNumeralSystem('devanagari').then(() => refreshWidgets())
+              }}
             />
-          ))}
-        </View>
-        <Text style={[styles.subLabel, { color: theme.colors.textAdSecondary }]}>Reveal note</Text>
-        <TextInput
-          value={draftNote}
-          onChangeText={setDraftNote}
-          placeholder={DEFAULT_SPECIAL_NOTE}
-          placeholderTextColor={theme.colors.textAdSecondary}
-          multiline
-          style={[
-            styles.noteInput,
-            {
-              color: theme.colors.textPrimary,
-              backgroundColor: theme.colors.bgMuted,
-              borderColor: theme.colors.borderSubtle,
-            },
-          ]}
-        />
-        <View style={styles.row}>
+            <OptionChip
+              label="Arabic 18"
+              active={numeralSystem === 'arabic'}
+              onPress={() => {
+                void setNumeralSystem('arabic').then(() => refreshWidgets())
+              }}
+            />
+          </View>
+        </SettingsCard>
+
+        <SettingsCard
+          title="Home screen & alerts"
+          subtitle={
+            showTodayNotificationBar ? 'Today bar on · widget privacy' : 'Today bar off · widget privacy'
+          }
+          expanded={open.home}
+          onToggle={() => toggle('home')}
+        >
+          <Text style={[styles.groupLabel, { color: theme.colors.textAdSecondary }]}>
+            Nepali today bar
+          </Text>
+          <Text style={{ color: theme.colors.textSecondary, fontSize: 13 }}>
+            Persistent notification with today’s BS date and festivals.
+          </Text>
+          <View style={styles.row}>
+            <OptionChip
+              label="Off"
+              active={!showTodayNotificationBar}
+              onPress={() => {
+                void setShowTodayNotificationBar(false).then(() => syncTodayNotificationBar(false))
+              }}
+            />
+            <OptionChip
+              label="On"
+              active={showTodayNotificationBar}
+              onPress={() => {
+                void setShowTodayNotificationBar(true).then(() => syncTodayNotificationBar(true))
+              }}
+            />
+          </View>
+
+          <Text style={[styles.groupLabel, { color: theme.colors.textAdSecondary }]}>
+            Widget privacy
+          </Text>
+          <View style={styles.row}>
+            <OptionChip
+              label="Hide personal"
+              active={!widgetShowPersonal}
+              onPress={() => {
+                void setWidgetShowPersonal(false).then(() => refreshWidgets())
+              }}
+            />
+            <OptionChip
+              label="Show personal"
+              active={widgetShowPersonal}
+              onPress={() => {
+                void setWidgetShowPersonal(true).then(() => refreshWidgets())
+              }}
+            />
+          </View>
+
           <Pressable
             onPress={() => {
-              void setSpecialDay({
-                bsMonth: draftMonth,
-                bsDay: draftDay,
-                note: draftNote,
-              })
+              void scheduleLocalReminders()
             }}
-            style={[styles.actionInline, { backgroundColor: theme.colors.primary }]}
+            style={[styles.secondaryBtn, { backgroundColor: theme.colors.bgMuted }]}
           >
-            <Text style={{ color: theme.colors.primaryText, fontWeight: '700' }}>Save special day</Text>
+            <Text style={{ color: theme.colors.textPrimary, fontWeight: '600' }}>
+              Refresh tomorrow reminders
+            </Text>
           </Pressable>
-          {specialDay ? (
+        </SettingsCard>
+
+        <SettingsCard
+          title="Special day"
+          subtitle={`Private · ${specialSummary}`}
+          expanded={open.special}
+          onToggle={() => toggle('special')}
+        >
+          <Text style={{ color: theme.colors.textSecondary, fontSize: 13 }}>
+            Gold edge on the grid. Triple-tap that day’s title on Calendar to reveal your note.
+          </Text>
+
+          <Text style={[styles.groupLabel, { color: theme.colors.textAdSecondary }]}>Month</Text>
+          <View style={styles.row}>
+            {BS_MONTH_NAMES_NP.map((name, index) => {
+              const month = index + 1
+              return (
+                <OptionChip
+                  key={name}
+                  compact
+                  label={name}
+                  active={draftMonth === month}
+                  onPress={() => setDraftMonth(month)}
+                />
+              )
+            })}
+          </View>
+
+          <Text style={[styles.groupLabel, { color: theme.colors.textAdSecondary }]}>Day</Text>
+          <View style={styles.dayGrid}>
+            {Array.from({ length: 32 }, (_, i) => i + 1).map((day) => (
+              <OptionChip
+                key={day}
+                compact
+                label={formatNumber(day, numeralSystem)}
+                active={draftDay === day}
+                onPress={() => setDraftDay(day)}
+              />
+            ))}
+          </View>
+
+          <Text style={[styles.groupLabel, { color: theme.colors.textAdSecondary }]}>Note</Text>
+          <TextInput
+            value={draftNote}
+            onChangeText={setDraftNote}
+            placeholder={DEFAULT_SPECIAL_NOTE}
+            placeholderTextColor={theme.colors.textAdSecondary}
+            multiline
+            style={[
+              styles.noteInput,
+              {
+                color: theme.colors.textPrimary,
+                backgroundColor: theme.colors.bgMuted,
+                borderColor: theme.colors.borderSubtle,
+              },
+            ]}
+          />
+
+          <View style={styles.row}>
             <Pressable
               onPress={() => {
-                void setSpecialDay(null)
+                void setSpecialDay({
+                  bsMonth: draftMonth,
+                  bsDay: draftDay,
+                  note: draftNote,
+                })
               }}
-              style={[styles.actionInline, { backgroundColor: theme.colors.bgMuted }]}
+              style={[styles.primaryBtn, { backgroundColor: theme.colors.primary }]}
             >
-              <Text style={{ color: theme.colors.textPrimary, fontWeight: '600' }}>Clear</Text>
+              <Text style={{ color: theme.colors.primaryText, fontWeight: '700' }}>Save</Text>
             </Pressable>
+            {specialDay ? (
+              <Pressable
+                onPress={() => {
+                  void setSpecialDay(null)
+                }}
+                style={[styles.primaryBtn, { backgroundColor: theme.colors.bgMuted }]}
+              >
+                <Text style={{ color: theme.colors.textPrimary, fontWeight: '600' }}>Clear</Text>
+              </Pressable>
+            ) : null}
+          </View>
+        </SettingsCard>
+
+        <SettingsCard
+          title="About & updates"
+          subtitle={`v${getInstalledVersion()}`}
+          expanded={open.about}
+          onToggle={() => toggle('about')}
+        >
+          <Text style={{ color: theme.colors.textSecondary, fontSize: 13 }}>
+            Installed {getInstalledVersion()} · com.uplixor.miti
+          </Text>
+          <Pressable
+            disabled={checkingUpdate}
+            onPress={() => {
+              setCheckingUpdate(true)
+              setUpdateMessage(null)
+              void checkForAppUpdate()
+                .then((info) => {
+                  setUpdateInfo(info.available ? info : null)
+                  setUpdateMessage(
+                    info.available
+                      ? null
+                      : `You are on the latest release (${info.currentVersion}).`,
+                  )
+                })
+                .finally(() => setCheckingUpdate(false))
+            }}
+            style={[styles.secondaryBtn, { backgroundColor: theme.colors.bgMuted }]}
+          >
+            {checkingUpdate ? (
+              <ActivityIndicator color={theme.colors.primary} />
+            ) : (
+              <Text style={{ color: theme.colors.textPrimary, fontWeight: '600' }}>
+                Check for updates
+              </Text>
+            )}
+          </Pressable>
+          {updateMessage ? (
+            <Text style={{ color: theme.colors.textSecondary }}>{updateMessage}</Text>
           ) : null}
-        </View>
-        {specialDay ? (
-          <Text style={{ color: theme.colors.textSecondary }}>
-            Active: {BS_MONTH_NAMES_NP[specialDay.bsMonth - 1]}{' '}
-            {formatNumber(specialDay.bsDay, numeralSystem)}
+          {updateInfo ? <UpdateAvailableCard update={updateInfo} /> : null}
+          <Text style={[theme.typography.caption, { color: theme.colors.textAdSecondary }]}>
+            Offline-first · Festival dates from verified seed data
           </Text>
-        ) : (
-          <Text style={{ color: theme.colors.textAdSecondary }}>No special day saved yet.</Text>
-        )}
-
-        <Pressable
-          onPress={() => {
-            void scheduleLocalReminders()
-          }}
-          style={[styles.action, { backgroundColor: theme.colors.bgMuted }]}
-        >
-          <Text style={{ color: theme.colors.textPrimary, fontWeight: '600' }}>
-            Refresh local notifications
-          </Text>
-        </Pressable>
-
-        <Text style={[styles.section, { color: theme.colors.textSecondary }]}>App updates</Text>
-        <Text style={{ color: theme.colors.textSecondary }}>
-          Installed {getInstalledVersion()}
-        </Text>
-        <Pressable
-          disabled={checkingUpdate}
-          onPress={() => {
-            setCheckingUpdate(true)
-            setUpdateMessage(null)
-            void checkForAppUpdate()
-              .then((info) => {
-                setUpdateInfo(info.available ? info : null)
-                setUpdateMessage(
-                  info.available
-                    ? null
-                    : `You are on the latest release (${info.currentVersion}).`,
-                )
-              })
-              .finally(() => setCheckingUpdate(false))
-          }}
-          style={[styles.action, { backgroundColor: theme.colors.bgMuted, marginTop: 8 }]}
-        >
-          {checkingUpdate ? (
-            <ActivityIndicator color={theme.colors.primary} />
-          ) : (
-            <Text style={{ color: theme.colors.textPrimary, fontWeight: '600' }}>
-              Check for updates
-            </Text>
-          )}
-        </Pressable>
-        {updateMessage ? (
-          <Text style={{ color: theme.colors.textSecondary }}>{updateMessage}</Text>
-        ) : null}
-        {updateInfo ? <UpdateAvailableCard update={updateInfo} /> : null}
-
-        <Text style={[theme.typography.caption, { color: theme.colors.textAdSecondary, marginTop: 20 }]}>
-          Package com.uplixor.miti · Offline-first · Festival dates from verified seed data
-        </Text>
+        </SettingsCard>
       </ScrollView>
     </SafeAreaView>
   )
@@ -292,29 +408,58 @@ export default function SettingsScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1 },
-  content: { padding: 16, gap: 10 },
-  section: {
-    marginTop: 18,
-    marginBottom: 4,
+  content: { padding: 16, gap: 12, paddingBottom: 32 },
+  card: {
+    borderWidth: 1,
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    gap: 10,
+  },
+  cardTitle: {
+    fontSize: 16,
     fontWeight: '700',
+  },
+  cardBody: {
+    paddingHorizontal: 14,
+    paddingBottom: 14,
+    gap: 8,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: 'rgba(128,128,128,0.25)',
+  },
+  groupLabel: {
+    marginTop: 8,
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.5,
     textTransform: 'uppercase',
-    fontSize: 12,
-    letterSpacing: 0.6,
   },
   row: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
   },
-  subLabel: {
-    marginTop: 8,
-    fontSize: 12,
-    fontWeight: '600',
+  dayGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
   },
-  option: {
+  chip: {
     paddingHorizontal: 12,
     paddingVertical: 10,
     borderRadius: 12,
+  },
+  chipCompact: {
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    borderRadius: 10,
+    minWidth: 40,
+    alignItems: 'center',
   },
   noteInput: {
     minHeight: 72,
@@ -324,16 +469,15 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     textAlignVertical: 'top',
   },
-  action: {
-    marginTop: 24,
-    padding: 14,
+  primaryBtn: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     borderRadius: 12,
     alignItems: 'center',
   },
-  actionInline: {
+  secondaryBtn: {
     marginTop: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    padding: 14,
     borderRadius: 12,
     alignItems: 'center',
   },

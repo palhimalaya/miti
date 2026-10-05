@@ -3,7 +3,10 @@ import { seedDatabase } from '@/src/db/seed'
 import { useSettingsStore } from '@/src/stores/settingsStore'
 import { useCalendarStore } from '@/src/stores/calendarStore'
 import { refreshWidgets } from '@/src/features/widget/refreshWidgets'
-import { ensureNotificationPermissions } from '@/src/services/notifications'
+import {
+  ensureNotificationPermissions,
+  syncTodayNotificationBar,
+} from '@/src/services/notifications'
 
 export async function bootstrapApp() {
   migrateDatabase()
@@ -12,6 +15,7 @@ export async function bootstrapApp() {
   await useCalendarStore.getState().init()
   try {
     await ensureNotificationPermissions()
+    await syncTodayNotificationBar(useSettingsStore.getState().showTodayNotificationBar)
   } catch (error) {
     console.warn('[miti] notification permission skipped:', error)
   }

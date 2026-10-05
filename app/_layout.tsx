@@ -71,6 +71,7 @@ function RootNavigator() {
     >
       <Stack>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="calendar" options={{ headerShown: false, animation: 'none' }} />
         <Stack.Screen
           name="event-modal"
           options={{ presentation: 'modal', title: 'Add event' }}

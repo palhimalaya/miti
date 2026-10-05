@@ -1,0 +1,18 @@
+<lint-module
+    format="1"
+    dir="/home/cosine/projects/miti/modules/miti-today-bar/android"
+    name=":miti-today-bar"
+    type="LIBRARY"
+    maven="expo.modules.mititodaybar:miti-today-bar:1.0.0"
+    agpVersion="8.12.0"
+    buildFolder="build"
+    bootClassPath="/home/cosine/Android/Sdk/platforms/android-36/android.jar:/home/cosine/Android/Sdk/build-tools/35.0.0/core-lambda-stubs.jar"
+    javaSourceLevel="17"
+    compileTarget="android-36"
+    neverShrinking="true">
+  <lintOptions
+      absolutePaths="true"
+      checkReleaseBuilds="true"
+      explainIssues="true"/>
+  <variant name="release"/>
+</lint-module>

@@ -13,6 +13,7 @@ type SettingsState = AppSettings & {
   setTheme: (value: AppSettings['theme']) => Promise<void>
   setUiLanguage: (value: AppSettings['uiLanguage']) => Promise<void>
   setWidgetShowPersonal: (value: boolean) => Promise<void>
+  setShowTodayNotificationBar: (value: boolean) => Promise<void>
   setSpecialDay: (value: SpecialDay | null) => Promise<void>
 }
 
@@ -22,6 +23,7 @@ export const useSettingsStore = create<SettingsState>((set) => ({
   uiLanguage: 'bilingual',
   weekStartsOn: 0,
   widgetShowPersonal: false,
+  showTodayNotificationBar: false,
   timezonePolicy: 'asia_kathmandu',
   specialDay: null,
   hydrated: false,
@@ -44,6 +46,10 @@ export const useSettingsStore = create<SettingsState>((set) => ({
   setWidgetShowPersonal: async (value) => {
     await saveSetting('widgetShowPersonal', value)
     set({ widgetShowPersonal: value })
+  },
+  setShowTodayNotificationBar: async (value) => {
+    await saveSetting('showTodayNotificationBar', value)
+    set({ showTodayNotificationBar: value })
   },
   setSpecialDay: async (value) => {
     const next = value

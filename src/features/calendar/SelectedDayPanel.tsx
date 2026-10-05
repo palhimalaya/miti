@@ -46,24 +46,35 @@ export function SelectedDayPanel({
 
   const secretDay = isSpecialBsDay(day.bs, specialDay)
 
+  const revealSecret = () => {
+    if (!secretDay || !specialDay) return
+    tapsRef.current = 0
+    setSecretOpen(true)
+    Alert.alert('✦ Special day', specialDay.note)
+  }
+
   const onTitlePress = () => {
-    if (!secretDay || secretOpen) return
+    if (!secretDay) return
+    if (secretOpen) {
+      Alert.alert('✦ Special day', specialDay?.note ?? DEFAULT_SPECIAL_NOTE)
+      return
+    }
     tapsRef.current += 1
     if (tapTimerRef.current) clearTimeout(tapTimerRef.current)
     if (tapsRef.current >= SPECIAL_REVEAL_TAPS) {
-      tapsRef.current = 0
-      setSecretOpen(true)
+      revealSecret()
       return
     }
+    // Generous window — slow taps still count.
     tapTimerRef.current = setTimeout(() => {
       tapsRef.current = 0
-    }, 900)
+    }, 2500)
   }
 
   const onTitleLongPress = () => {
     Alert.alert(
       'Special day',
-      `Save ${day.bs.monthNameNp} ${formatNumber(day.bs.day, numeralSystem)} as your private special day?\n\nTriple-tap the title later to reveal your note.`,
+      `Save ${day.bs.monthNameNp} ${formatNumber(day.bs.day, numeralSystem)} as your private special day?\n\nTriple-tap this title later to reveal your note.`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -86,7 +97,10 @@ export function SelectedDayPanel({
         onPress={onTitlePress}
         onLongPress={onTitleLongPress}
         delayLongPress={450}
-        accessibilityRole="text"
+        accessibilityRole="button"
+        accessibilityHint={
+          secretDay ? 'Triple tap to reveal your private special day note' : 'Long press to save as special day'
+        }
       >
         <Text style={[theme.typography.titleBs, { color: theme.colors.textPrimary }]}>
           {formatNumber(day.bs.day, numeralSystem)} {day.bs.monthNameNp}{' '}
@@ -95,6 +109,11 @@ export function SelectedDayPanel({
         <Text style={[theme.typography.subtitleAd, { color: theme.colors.textSecondary }]}>
           {day.weekday.nameEn} · {day.ad.monthNameEn} {day.ad.day}, {day.ad.year}
         </Text>
+        {secretDay && !secretOpen ? (
+          <Text style={[theme.typography.caption, { color: theme.colors.festive, marginTop: 4 }]}>
+            ✦ Triple-tap here for your note
+          </Text>
+        ) : null}
       </Pressable>
 
       {secretOpen && specialDay ? (

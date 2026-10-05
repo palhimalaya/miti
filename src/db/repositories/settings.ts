@@ -11,6 +11,8 @@ export type AppSettings = {
   uiLanguage: 'bilingual' | 'np' | 'en'
   weekStartsOn: 0
   widgetShowPersonal: boolean
+  /** Persistent notification-shade Nepali date toolbar. */
+  showTodayNotificationBar: boolean
   timezonePolicy: 'asia_kathmandu'
   /** Personal easter-egg day (BS month/day + note). Local only. */
   specialDay: SpecialDay | null
@@ -22,6 +24,7 @@ const DEFAULTS: AppSettings = {
   uiLanguage: 'bilingual',
   weekStartsOn: 0,
   widgetShowPersonal: false,
+  showTodayNotificationBar: false,
   timezonePolicy: 'asia_kathmandu',
   specialDay: null,
 }
@@ -48,6 +51,10 @@ export async function loadSettings(): Promise<AppSettings> {
     uiLanguage: await getJson('ui_language', DEFAULTS.uiLanguage),
     weekStartsOn: await getJson('week_starts_on', DEFAULTS.weekStartsOn),
     widgetShowPersonal: await getJson('widget_show_personal', DEFAULTS.widgetShowPersonal),
+    showTodayNotificationBar: await getJson(
+      'show_today_notification_bar',
+      DEFAULTS.showTodayNotificationBar,
+    ),
     timezonePolicy: await getJson('timezone_policy', DEFAULTS.timezonePolicy),
     specialDay: await getJson('special_day', DEFAULTS.specialDay),
   }
@@ -63,6 +70,7 @@ export async function saveSetting<K extends keyof AppSettings>(
     uiLanguage: 'ui_language',
     weekStartsOn: 'week_starts_on',
     widgetShowPersonal: 'widget_show_personal',
+    showTodayNotificationBar: 'show_today_notification_bar',
     timezonePolicy: 'timezone_policy',
     specialDay: 'special_day',
   }

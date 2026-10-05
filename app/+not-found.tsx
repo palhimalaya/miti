@@ -1,36 +1,25 @@
-import { Link, Stack } from 'expo-router'
-import { StyleSheet, Text, View } from 'react-native'
+import { useEffect } from 'react'
+import { ActivityIndicator, View } from 'react-native'
+import { useRouter } from 'expo-router'
 
+/** Safety net — never leave the user on a dead-end screen. */
 export default function NotFoundScreen() {
+  const router = useRouter()
+
+  useEffect(() => {
+    router.replace('/(tabs)')
+  }, [router])
+
   return (
-    <>
-      <Stack.Screen options={{ title: 'Not found' }} />
-      <View style={styles.container}>
-        <Text style={styles.title}>Screen not found</Text>
-        <Link href="/" style={styles.link}>
-          Go to calendar
-        </Link>
-      </View>
-    </>
+    <View
+      style={{
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#FFF8EC',
+      }}
+    >
+      <ActivityIndicator color="#9B1C31" />
+    </View>
   )
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 20,
-    backgroundColor: '#FFF8EC',
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#252525',
-  },
-  link: {
-    marginTop: 16,
-    color: '#9B1C31',
-    fontWeight: '600',
-  },
-})

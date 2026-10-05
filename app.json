@@ -55,6 +55,7 @@
       [
         "expo-notifications",
         {
+          "icon": "./assets/images/notification-icon-small.png",
           "color": "#9B1C31"
         }
       ],
@@ -70,7 +71,7 @@
               "targetCellWidth": 2,
               "targetCellHeight": 2,
               "resizeMode": "horizontal|vertical",
-              "description": "Nepali date, English date, and today's occasion",
+              "description": "Compact Nepali date for today",
               "previewImage": "./assets/images/icon.png",
               "updatePeriodMillis": 1800000
             },
@@ -78,11 +79,11 @@
               "name": "MitiMedium",
               "label": "Miti — Month",
               "minWidth": "250dp",
-              "minHeight": "180dp",
+              "minHeight": "200dp",
               "targetCellWidth": 4,
               "targetCellHeight": 3,
               "resizeMode": "horizontal|vertical",
-              "description": "Browse Nepali month with festivals",
+              "description": "Full Nepali month grid",
               "previewImage": "./assets/images/icon.png",
               "updatePeriodMillis": 1800000
             },
@@ -90,7 +91,7 @@
               "name": "MitiLarge",
               "label": "Miti — Calendar",
               "minWidth": "250dp",
-              "minHeight": "250dp",
+              "minHeight": "280dp",
               "targetCellWidth": 4,
               "targetCellHeight": 4,
               "resizeMode": "horizontal|vertical",
